@@ -3,19 +3,19 @@
 #include "kernel/fcntl.h"
 #include "user/user.h"
 
-char*
-strcpy(char *s, const char *t)
+char*  
+strcpy(char *s, const char *t)  //字符串复制
 {
   char *os;
 
-  os = s;
+  os = s; //保存起始地址
   while((*s++ = *t++) != 0)
     ;
   return os;
 }
 
 int
-strcmp(const char *p, const char *q)
+strcmp(const char *p, const char *q)  //比较字符串，相等返回0
 {
   while(*p && *p == *q)
     p++, q++;
@@ -23,7 +23,7 @@ strcmp(const char *p, const char *q)
 }
 
 uint
-strlen(const char *s)
+strlen(const char *s) //求字符串长度
 {
   int n;
 
@@ -44,7 +44,7 @@ memset(void *dst, int c, uint n)
 }
 
 char*
-strchr(const char *s, char c)
+strchr(const char *s, char c)   //在字符串s中查找c
 {
   for(; *s; s++)
     if(*s == c)
@@ -53,7 +53,7 @@ strchr(const char *s, char c)
 }
 
 char*
-gets(char *buf, int max)
+gets(char *buf, int max)  
 {
   int i, cc;
   char c;

@@ -27,7 +27,7 @@ int uptime(void);
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);
-void *memmove(void*, const void*, int);
+void *memmove(void*, const void*, int); //将第二个参数src指向的内存块数据复制int n个字节到dest
 char* strchr(const char*, char c);
 int strcmp(const char*, const char*);
 void fprintf(int, const char*, ...);

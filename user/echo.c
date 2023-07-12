@@ -2,6 +2,8 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
+//argc：命令行参数个数
+//argv：所有命令行参数
 int
 main(int argc, char *argv[])
 {
