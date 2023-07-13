@@ -8,6 +8,15 @@
 #include "proc.h"
 
 uint64
+sys_trace()
+{
+  //获取系统调用参数(第0个)
+  argint(0,&(myproc()->mask));
+  return 0;
+  ;
+}
+
+uint64
 sys_exit(void)
 {
   int n;

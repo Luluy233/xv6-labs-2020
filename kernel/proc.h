@@ -1,10 +1,10 @@
 // Saved registers for kernel context switches.
 struct context {
-  uint64 ra;
-  uint64 sp;
+  uint64 ra; //返回地址寄存器
+  uint64 sp; //堆栈指针寄存器：指向堆栈的顶部，堆栈是用于存储局部变量和函数调用信息的内存地址
 
   // callee-saved
-  uint64 s0;
+  uint64 s0;  //寄存器
   uint64 s1;
   uint64 s2;
   uint64 s3;
@@ -20,10 +20,10 @@ struct context {
 
 // Per-CPU state.
 struct cpu {
-  struct proc *proc;          // The process running on this cpu, or null.
-  struct context context;     // swtch() here to enter scheduler().
-  int noff;                   // Depth of push_off() nesting.
-  int intena;                 // Were interrupts enabled before push_off()?
+  struct proc *proc;          // The process running on this cpu, or null.在该cup上运行的进程指针
+  struct context context;     // swtch() here to enter scheduler(). 上下文信息
+  int noff;                   // Depth of push_off() nesting. push_off（）函数的嵌套深度
+  int intena;                 // 调用push_off()函数前中断是否已经启用
 };
 
 extern struct cpu cpus[NCPU];
@@ -84,6 +84,9 @@ enum procstate { UNUSED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
 struct proc {
+    // done
+  int mask; //trace系统调用参数
+
   struct spinlock lock;
 
   // p->lock must be held when using these:

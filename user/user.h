@@ -23,6 +23,8 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int trace(int);  //lab2-sys_trace
+
 
 // ulib.c
 int stat(const char*, struct stat*);
