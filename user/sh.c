@@ -14,39 +14,39 @@
 #define MAXARGS 10
 
 struct cmd {
-  int type;
+  int type; // type of command
 };
 
-struct execcmd {
-  int type;
-  char *argv[MAXARGS];
-  char *eargv[MAXARGS];
+struct execcmd {  //可执行命令
+  int type;               // type of command：EXEC
+  char *argv[MAXARGS];     //命令参数
+  char *eargv[MAXARGS];     //环境变量
 };
 
-struct redircmd {
-  int type;
-  struct cmd *cmd;
-  char *file;
-  char *efile;
-  int mode;
-  int fd;
+struct redircmd {  //带有输入/输出重定向的命令
+  int type;         //REDIR
+  struct cmd *cmd;  //指向命令的指针
+  char *file;   //文件名
+  char *efile;  //错误文件名
+  int mode;   //文件模式
+  int fd;  //文件描述符
 };
 
-struct pipecmd {
-  int type;
-  struct cmd *left;
-  struct cmd *right;
+struct pipecmd {   //管道命令
+  int type;  //PIPE
+  struct cmd *left;  //指向左命令的指针
+  struct cmd *right; //指向右命令的指针
 };
 
-struct listcmd {
-  int type;
-  struct cmd *left;
-  struct cmd *right;
+struct listcmd {  //命令列表：用于按顺序执行多个命令
+  int type;  //LIST
+  struct cmd *left; //左命令
+  struct cmd *right; //右边命令
 };
 
-struct backcmd {
-  int type;
-  struct cmd *cmd;
+struct backcmd {  //后台命令
+  int type;  //BACK
+  struct cmd *cmd; //指向实际命令
 };
 
 int fork1(void);  // Fork but panics on failure.
@@ -64,7 +64,7 @@ runcmd(struct cmd *cmd)
   struct pipecmd *pcmd;
   struct redircmd *rcmd;
 
-  if(cmd == 0)
+  if(cmd == 0)  //命令类型未知
     exit(1);
 
   switch(cmd->type){
@@ -72,7 +72,7 @@ runcmd(struct cmd *cmd)
     panic("runcmd");
 
   case EXEC:
-    ecmd = (struct execcmd*)cmd;
+    ecmd = (struct execcmd*)cmd;//命令类型转换
     if(ecmd->argv[0] == 0)
       exit(1);
     exec(ecmd->argv[0], ecmd->argv);
@@ -80,35 +80,35 @@ runcmd(struct cmd *cmd)
     break;
 
   case REDIR:
-    rcmd = (struct redircmd*)cmd;
-    close(rcmd->fd);
-    if(open(rcmd->file, rcmd->mode) < 0){
+    rcmd = (struct redircmd*)cmd; //命令类型转换
+    close(rcmd->fd); //关闭重定向文件描述符
+    if(open(rcmd->file, rcmd->mode) < 0){  //以制定mode打开制定文件
       fprintf(2, "open %s failed\n", rcmd->file);
       exit(1);
     }
-    runcmd(rcmd->cmd);
+    runcmd(rcmd->cmd); //递归调用runcmd执行重定向后的命令
     break;
 
   case LIST:
     lcmd = (struct listcmd*)cmd;
-    if(fork1() == 0)
+    if(fork1() == 0)  //创建子进程-为子进程，递归调用runcmd函数执行左侧命令left
       runcmd(lcmd->left);
-    wait(0);
-    runcmd(lcmd->right);
+    wait(0);  //等待子进程结束
+    runcmd(lcmd->right);  //执行右侧命令
     break;
 
   case PIPE:
     pcmd = (struct pipecmd*)cmd;
-    if(pipe(p) < 0)
+    if(pipe(p) < 0)  //创建管道
       panic("pipe");
-    if(fork1() == 0){
+    if(fork1() == 0){  //子进程1：执行管道左侧命令
       close(1);
       dup(p[1]);
       close(p[0]);
       close(p[1]);
       runcmd(pcmd->left);
     }
-    if(fork1() == 0){
+    if(fork1() == 0){   //子进程2，执行管道右侧命令
       close(0);
       dup(p[0]);
       close(p[0]);
@@ -131,14 +131,14 @@ runcmd(struct cmd *cmd)
 }
 
 int
-getcmd(char *buf, int nbuf)
+getcmd(char *buf, int nbuf)  //获取用户输入的命令
 {
-  fprintf(2, "$ ");
-  memset(buf, 0, nbuf);
-  gets(buf, nbuf);
+  fprintf(2, "$ ");  //输出命令提示符
+  memset(buf, 0, nbuf); //初始化命令缓冲区为0
+  gets(buf, nbuf);  //从用户输入读取命令，并存在命令缓冲区
   if(buf[0] == 0) // EOF
     return -1;
-  return 0;
+  return 0;//成功获取命令
 }
 
 int
@@ -263,13 +263,13 @@ char whitespace[] = " \t\r\n\v";
 char symbols[] = "<|>&;()";
 
 int
-gettoken(char **ps, char *es, char **q, char **eq)
-{
+gettoken(char **ps, char *es, char **q, char **eq)  //从输入字符串中获取下一个标记
+{  //ps/es：指向输入字符串的指针  q/eq：用于返回标记的起始和结束指针
   char *s;
   int ret;
 
   s = *ps;
-  while(s < es && strchr(whitespace, *s))
+  while(s < es && strchr(whitespace, *s)) //移动到非空字符位置
     s++;
   if(q)
     *q = s;
@@ -308,7 +308,7 @@ gettoken(char **ps, char *es, char **q, char **eq)
 }
 
 int
-peek(char **ps, char *es, char *toks)
+peek(char **ps, char *es, char *toks) //检查输入字符串的下一字符是否符合toks
 {
   char *s;
 
@@ -325,19 +325,19 @@ struct cmd *parseexec(char**, char*);
 struct cmd *nulterminate(struct cmd*);
 
 struct cmd*
-parsecmd(char *s)
+parsecmd(char *s) //解析输入的命令字符串并生成相应的命令数据结构
 {
   char *es;
   struct cmd *cmd;
 
-  es = s + strlen(s);
-  cmd = parseline(&s, es);
-  peek(&s, es, "");
+  es = s + strlen(s);  //计算字符串结束位置
+  cmd = parseline(&s, es);  //解析从s到es的命令行，返回
+  peek(&s, es, "");//检查空字符
   if(s != es){
     fprintf(2, "leftovers: %s\n", s);
     panic("syntax");
   }
-  nulterminate(cmd);
+  nulterminate(cmd); //对命令进行终止符处理
   return cmd;
 }
 

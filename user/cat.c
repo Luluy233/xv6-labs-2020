@@ -9,7 +9,7 @@ cat(int fd)
 {
   int n;
 
-  while((n = read(fd, buf, sizeof(buf))) > 0) {
+  while((n = read(fd, buf, sizeof(buf))) > 0) {  //依次读取文件描述符fd的内容到缓冲区buf并通过缓冲区写到标准输出
     if (write(1, buf, n) != n) {
       fprintf(2, "cat: write error\n");
       exit(1);

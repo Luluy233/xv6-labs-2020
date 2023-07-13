@@ -2,148 +2,51 @@
 #include "user/user.h"
 #include "kernel/param.h"
 
-#define MAXSZ 512
-// 有限状态自动机状态定义
-enum state {
-  S_WAIT,         // 等待参数输入，此状态为初始状态或当前字符为空格
-  S_ARG,          // 参数内
-  S_ARG_END,      // 参数结束
-  S_ARG_LINE_END, // 左侧有参数的换行，例如"arg\n"
-  S_LINE_END,     // 左侧为空格的换行，例如"arg  \n""
-  S_END           // 结束，EOF
-};
+int main(int argc, char *argv[]) {
+  char buffer[512];//标准输入缓冲区（1次从标准输入读取5）
+  char param[MAXARG][MAXARG];//存储argv命令行参数 + 从标准输入读取的参数
+  char *pass[MAXARG];//传递给exec的参数，z指向param的指针数组
 
-// 字符类型定义
-enum char_type {
-  C_SPACE,
-  C_CHAR,
-  C_LINE_END
-};
+  //pass指针指向param
+  for (int i = 0; i < 32; i++)
+    pass[i] = param[i];
 
-/**
- * @brief 获取字符类型
- *
- * @param c 待判定的字符
- * @return enum char_type 字符类型
- */
-enum char_type get_char_type(char c)
-{
-  switch (c) {
-  case ' ':
-    return C_SPACE;
-  case '\n':
-    return C_LINE_END;
-  default:
-    return C_CHAR;
+  //param初始化：0~argc-2存储命令行参数argv[1]~argv[argc-1]
+  for (int i = 1; i < argc; i++)
+    strcpy(param[i - 1], argv[i]);
+
+  // n：每次从标准输入读取512个字节到缓冲区的返回值
+  int n;
+  //从标准输入读取内容到缓冲区buffer
+  while ((n = read(0, buffer, sizeof(buffer))) > 0) {
+    // 数组param的偏移量（下标）
+    int pos = argc - 1;
+    //c：指向param[pos]参数的当前字节
+    char *c = param[pos];
+    for (char *p = buffer; *p; p++) {
+      if (*p == ' ' || *p == '\n') { //读取完1个参数
+        *c = '\0';  //标记参数结束，eg：param
+        pos++;  //总参数量+1
+        c = param[pos];  //指向下一个参数
+      } else  //读完1个字符，向下移动
+        *c++ = *p;
+    }
+    //读完当前缓冲区
+    *c = '\0';
+    pos++;
+    pass[pos] = 0;
+
+    if (fork()==0) {
+      exec(pass[0], pass);
+    } else{
+      wait(0);
+    }
   }
-}
-
-/**
- * @brief 状态转换
- *
- * @param cur 当前的状态
- * @param ct 将要读取的字符
- * @return enum state 转换后的状态
- */
-enum state transform_state(enum state cur, enum char_type ct)
-{
-  switch (cur) {
-  case S_WAIT:
-    if (ct == C_SPACE)    return S_WAIT; //等待参数输入
-    if (ct == C_LINE_END) return S_LINE_END;
-    if (ct == C_CHAR)     return S_ARG;
-    break;
-  case S_ARG:
-    if (ct == C_SPACE)    return S_ARG_END;
-    if (ct == C_LINE_END) return S_ARG_LINE_END;
-    if (ct == C_CHAR)     return S_ARG;
-    break;
-  case S_ARG_END:
-  case S_ARG_LINE_END:
-  case S_LINE_END:
-    if (ct == C_SPACE)    return S_WAIT;
-    if (ct == C_LINE_END) return S_LINE_END;
-    if (ct == C_CHAR)     return S_ARG;
-    break;
-  default:
-    break;
-  }
-  return S_END;
-}
-
-
-/**
- * @brief 将参数列表后面的元素全部置为空
- *        用于换行时，重新赋予参数
- *
- * @param x_argv 参数指针数组
- * @param beg 要清空的起始下标
- */
-void clearArgv(char *x_argv[MAXARG], int beg)
-{
-  for (int i = beg; i < MAXARG; ++i)
-    x_argv[i] = 0;
-}
-
-int main(int argc, char *argv[])
-{
-  if (argc - 1 >= MAXARG) {
-    fprintf(2, "xargs: too many arguments.\n");
+  // 读出错
+  if (n < 0) {
+    printf("xargs: read error\n");
     exit(1);
   }
-  char lines[MAXSZ];
-  char *p = lines;
-  char *x_argv[MAXARG] = {0}; // 参数指针数组，全部初始化为空指针
 
-  // 存储原有的参数
-  for (int i = 1; i < argc; ++i) {
-    x_argv[i - 1] = argv[i];
-  }
-  int arg_beg = 0;          // 参数起始下标
-  int arg_end = 0;          // 参数结束下标
-  int arg_cnt = argc - 1;   // 当前参数索引
-  enum state st = S_WAIT;   // 起始状态置为S_WAIT
-
-  while (st != S_END) {
-    // 读取为空则退出
-    if (read(0, p, sizeof(char)) != sizeof(char)) {
-      st = S_END;
-    } else {
-      st = transform_state(st, get_char_type(*p));
-    }
-
-    if (++arg_end >= MAXSZ) {
-      fprintf(2, "xargs: arguments too long.\n");
-      exit(1);
-    }
-
-    switch (st) {
-    case S_WAIT:          // 这种情况下只需要让参数起始指针前移
-      ++arg_beg;
-      break;
-    case S_ARG_END:       // 参数结束，将参数地址存入x_argv数组中
-      x_argv[arg_cnt++] = &lines[arg_beg];
-      arg_beg = arg_end;
-      *p = '\0';          // 替换为字符串结束符
-      break;
-    case S_ARG_LINE_END:  // 将参数地址存入x_argv数组中同时执行指令
-      x_argv[arg_cnt++] = &lines[arg_beg];
-      // 不加break，因为后续处理同S_LINE_END
-    case S_LINE_END:      // 行结束，则为当前行执行指令
-      arg_beg = arg_end;
-      *p = '\0';
-      if (fork() == 0) {
-        exec(argv[1], x_argv);
-      }
-      arg_cnt = argc - 1;
-      clearArgv(x_argv, arg_cnt);
-      wait(0);
-      break;
-    default:
-      break;
-    }
-
-    ++p;    // 下一个字符的存储位置后移
-  }
   exit(0);
 }

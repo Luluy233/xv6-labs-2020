@@ -44,13 +44,11 @@ void prime(int left[2])
     // 右管道
     int right[2];
     pipe(right);
-    // 孙子进程
-    if(fork()==0){
+   
+    if(fork()==0){  // 孙子进程
         prime(right);
     }
-
-    //在当前进程（子进程）
-    else{
+    else{   //在当前进程（子进程）
         // 子进程不用读，只要写
         close(right[RD]);
 
