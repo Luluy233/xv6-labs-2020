@@ -105,6 +105,7 @@ extern uint64 sys_wait(void);
 extern uint64 sys_write(void);
 extern uint64 sys_uptime(void);
 extern uint64 sys_trace(void);  //lab2-sys trace
+extern uint64 sys_sysinfo(void); //lab2-sysinfo
 
 
 static uint64 (*syscalls[])(void) = {
@@ -130,6 +131,7 @@ static uint64 (*syscalls[])(void) = {
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
 [SYS_trace]   sys_trace,   //lab2 sys_trace
+[SYS_sysinfo] sys_sysinfo, //lab2 sys_sysinfo
 };
 
 static char *syscalls_name[] = {

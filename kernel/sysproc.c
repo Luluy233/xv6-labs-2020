@@ -6,9 +6,30 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.h" //lab2:sysinfo
+
+//lab2:sysinfo
+uint64
+sys_sysinfo(void)
+{
+  struct sysinfo info;
+  freebytes(&info.freemem); //获取空闲内存空间
+  getprocnum(&info.nproc); //获取进程数量
+
+  // 获取虚拟地址
+  uint64 dstaddr;
+  argaddr(0, &dstaddr);
+
+  // 从内核空间拷贝数据到用户空间
+  if (copyout(myproc()->pagetable, dstaddr, (char *)&info, sizeof info) < 0)
+    return -1;
+
+  return 0;
+}
+
 
 uint64
-sys_trace()
+sys_trace(void)
 {
   //获取系统调用参数(第0个)
   argint(0,&(myproc()->mask));

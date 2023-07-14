@@ -6,9 +6,9 @@
 #include "proc.h"
 #include "defs.h"
 
-struct cpu cpus[NCPU];
+struct cpu cpus[NCPU]; 
 
-struct proc proc[NPROC];
+struct proc proc[NPROC]; //进程结构体
 
 struct proc *initproc;
 
@@ -21,7 +21,7 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
-// initialize the proc table at boot time.
+// 初始化进程表，初始化进程表中的每个进程，为每个进程分配一个内核栈
 void
 procinit(void)
 {
@@ -73,6 +73,8 @@ myproc(void) {
   return p;
 }
 
+
+// 分配唯一的进程id
 int
 allocpid() {
   int pid;
@@ -261,6 +263,7 @@ fork(void)
   int i, pid;
   struct proc *np;
   struct proc *p = myproc();
+
 
   // Allocate process.
   if((np = allocproc()) == 0){
@@ -695,5 +698,16 @@ procdump(void)
       state = "???";
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
+  }
+}
+
+// 获取当前存在的进程数，即进程状态不是UNUSED
+void getprocnum(uint64 *dst)
+{
+  *dst = 0;
+  struct proc *p;
+  for (p = proc; p < &proc[NPROC]; p++) {
+    if (p->state != UNUSED)
+      (*dst)++;
   }
 }
