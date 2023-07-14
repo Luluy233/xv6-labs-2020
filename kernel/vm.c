@@ -63,15 +63,15 @@ kvminithart()
 // The risc-v Sv39 scheme has three levels of page-table
 // pages. A page-table page contains 512 64-bit PTEs.
 // A 64-bit virtual address is split into five fields:
-//   39..63 -- must be zero.
-//   30..38 -- 9 bits of level-2 index.
-//   21..29 -- 9 bits of level-1 index.
-//   12..20 -- 9 bits of level-0 index.
-//    0..11 -- 12 bits of byte offset within the page.
+//   39..63 -- must be zero. 未被使用
+//   30..38 -- 9 bits of level-2 index.  二级目录索引
+//   21..29 -- 9 bits of level-1 index.  一级目录索引
+//   12..20 -- 9 bits of level-0 index.  零级目录索引
+//    0..11 -- 12 bits of byte offset within the page.  页内偏移
 pte_t *
 walk(pagetable_t pagetable, uint64 va, int alloc)
 {
-  if(va >= MAXVA)
+  if(va >= MAXVA)  
     panic("walk");
 
   for(int level = 2; level > 0; level--) {
@@ -439,4 +439,42 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   } else {
     return -1;
   }
+}
+
+
+
+void _vmprint(pagetable_t pagetable,int level){
+
+    //遍历页表中的512个页表项
+  for(int i=0;i<512;i++){
+      if(level<0)
+          break;
+    pte_t pte=pagetable[i];
+    uint64 child=PTE2PA(pte);//指向下一级页表
+    //页表项有效（在物理内存中）且R/W/X都为0
+    if((pte & PTE_V)){
+      switch(level){
+        case 2:
+          printf("..%d: pte %p pa %p\n",i,pte,child);
+          break;
+        case 1:
+          printf(".. ..%d: pte %p pa %p\n",i,pte,child);
+          break;
+        case 0:
+          printf(".. .. ..%d: pte %p pa %p\n",i,pte,child);
+          break;
+        default: 
+          break;
+      }
+      if((pte & (PTE_R|PTE_W|PTE_X)) == 0){
+        _vmprint((pagetable_t)child,level-1);
+      }
+    }
+
+  }
+}
+
+void vmprint(pagetable_t pagetable){
+  printf("page table %p\n",pagetable);
+  _vmprint(pagetable,2);
 }
