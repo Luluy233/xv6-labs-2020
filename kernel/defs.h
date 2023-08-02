@@ -158,7 +158,10 @@ void            uartputc_sync(int);
 int             uartgetc(void);
 
 // vm.c
-void vmprint(pagetable_t pagetable);
+void proc_freekpagetable(pagetable_t kpagetable);//lab3-2
+void uvmmap(pagetable_t, uint64, uint64, uint64, int); //lab3-2
+pagetable_t proc_kpgtbl_init(void);  //lab3-2
+void vmprint(pagetable_t pagetable);  //lab3-1
 void            kvminit(void);
 void            kvminithart(void);
 uint64          kvmpa(uint64);

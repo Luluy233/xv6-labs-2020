@@ -121,6 +121,25 @@ found:
     return 0;
   }
 
+  //lab3-2仿照进程用户页表，初始化进程的内核页表
+	p->k_pagetable=proc_kpgtbl_init();
+	if(p->k_pagetable==0){
+        freeproc(p);
+        release(&p->lock);
+        return 0;
+  }
+
+  //lab3-2内核栈分配
+    char *pa = kalloc();//分配1页物理内存给该进程
+  if(pa == 0) //分配失败
+      panic("kalloc");
+  //计算当前进程的内核栈虚拟地址
+  uint64 va = KSTACK(0);//进程的内核栈虚拟地址从0开始
+  //进行物理地址和虚拟地址映射
+  uvmmap(p->k_pagetable, va,(uint64)pa,PGSIZE,PTE_R | PTE_W);
+  //将进程结构体的kstack为内核虚拟栈地址
+  p->kstack = va;
+
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
@@ -142,6 +161,18 @@ freeproc(struct proc *p)
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
+
+    //清空内核栈
+  if(p->kstack) {
+    uvmunmap(p->k_pagetable, p->kstack, 1, 1);
+  }
+  p->kstack = 0;
+    
+    //解除映射
+  if(p->k_pagetable)
+      proc_freekpagetable(p->k_pagetable);
+  p->k_pagetable=0;
+
   p->sz = 0;
   p->pid = 0;
   p->parent = 0;
@@ -473,13 +504,18 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        //lab3-2:在硬件中启用操作系统内核的页表并开启分页功能
+        w_satp(MAKE_SATP(p->k_pagetable));
+        sfence_vma();
+
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
-
         found = 1;
+        //lab3-2：进程结束，切换为全局内核页表
+        kvminithart();
       }
       release(&p->lock);
     }

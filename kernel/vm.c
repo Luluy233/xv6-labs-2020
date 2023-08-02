@@ -5,6 +5,9 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+//lab3-2
+#include "spinlock.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -132,7 +135,7 @@ kvmpa(uint64 va)
   pte_t *pte;
   uint64 pa;
   
-  pte = walk(kernel_pagetable, va, 0);
+  pte = walk(myproc()->k_pagetable, va, 0);
   if(pte == 0)
     panic("kvmpa");
   if((*pte & PTE_V) == 0)
@@ -477,4 +480,42 @@ void _vmprint(pagetable_t pagetable,int level){
 void vmprint(pagetable_t pagetable){
   printf("page table %p\n",pagetable);
   _vmprint(pagetable,2);
+}
+
+//lab3-2 添加辅助函数`uvmmap`（仿照kvmmap用于为进程内核页表增加映射）
+void
+uvmmap(pagetable_t pagetable, uint64 va, uint64 pa, uint64 sz, int perm)
+{
+  if(mappages(pagetable, va, sz, pa, perm) != 0)
+    panic("uvmmap");
+}
+
+//lab3-2：参考kvminit、kvmmake创建进程自己的内核页表映射
+pagetable_t
+proc_kpgtbl_init()
+{
+  pagetable_t kernelpt = uvmcreate();//新建空的用户页表（进程自己的内核页表）
+  if (kernelpt == 0) return 0;
+    //实现直接的虚拟地址到物理地址的映射
+  uvmmap(kernelpt, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+  uvmmap(kernelpt, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+  uvmmap(kernelpt, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+  uvmmap(kernelpt, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+  uvmmap(kernelpt, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+  uvmmap(kernelpt, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+  uvmmap(kernelpt, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+  return kernelpt;
+}
+
+//lab3-2
+void proc_freekpagetable(pagetable_t kpagetable) {
+    //解除映射
+    uvmunmap(kpagetable, UART0, 1, 0);
+    uvmunmap(kpagetable, VIRTIO0, 1, 0);
+    uvmunmap(kpagetable, CLINT, 0x10000 / PGSIZE, 0);
+    uvmunmap(kpagetable, PLIC, 0x400000 / PGSIZE, 0);
+    uvmunmap(kpagetable, KERNBASE, (PHYSTOP - KERNBASE) / PGSIZE, 0);
+    uvmunmap(kpagetable, TRAMPOLINE, 1, 0);
+    //释放物理内存大小
+    uvmfree(kpagetable, 0);
 }
