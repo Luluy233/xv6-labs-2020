@@ -157,11 +157,16 @@ void            uartputc(int);
 void            uartputc_sync(int);
 int             uartgetc(void);
 
+//lab3-3:vmcopyin.c
+int copyin_new(pagetable_t, char *, uint64, uint64);
+int copyinstr_new(pagetable_t, char *, uint64, uint64);
+
 // vm.c
-void proc_freekpagetable(pagetable_t kpagetable);//lab3-2
-void uvmmap(pagetable_t, uint64, uint64, uint64, int); //lab3-2
-pagetable_t proc_kpgtbl_init(void);  //lab3-2
-void vmprint(pagetable_t pagetable);  //lab3-1
+void            u2kvmcopy(pagetable_t, pagetable_t, uint64, uint64);//lab3-3
+void            proc_freekpagetable(pagetable_t kpagetable);//lab3-2
+void            uvmmap(pagetable_t, uint64, uint64, uint64, int); //lab3-2
+pagetable_t     proc_kpgtbl_init(void);  //lab3-2
+void            vmprint(pagetable_t pagetable);  //lab3-1
 void            kvminit(void);
 void            kvminithart(void);
 uint64          kvmpa(uint64);
