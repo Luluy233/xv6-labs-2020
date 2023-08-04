@@ -8,6 +8,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct trapframe;//lab4-3
 
 // bio.c
 void            binit(void);
@@ -141,6 +142,7 @@ int             fetchaddr(uint64, uint64*);
 void            syscall();
 
 // trap.c
+void           backupTrapframe(struct trapframe*, struct trapframe*);//lab4-3
 extern uint     ticks;
 void            trapinit(void);
 void            trapinithart(void);

@@ -96,3 +96,31 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+//lab4-3：
+uint64 sys_sigalarm(void){
+  struct proc *p=myproc();
+  int n;
+  uint64 func;
+  //获取时间间隔参数和对应的函数指针参数
+  if(argint(0,&n)<0)
+    return -1;
+  if(argaddr(1,&func)<0)
+    return -1;
+
+    //初始化alarm相关字段
+  p->alarm_interval = n;
+  p->alarm_ticks=n;
+  p->alarm_handerler = (void (*)())(func);
+
+  return 0;
+}
+
+//lab4-3
+uint64 sys_sigreturn(void){
+  struct proc *p=myproc();
+  //备份trapframe
+  backupTrapframe(p->alarm_trapframe,p->trapframe);
+  p->handler_is_return=0;
+  return 0;
+}

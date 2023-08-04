@@ -2,6 +2,8 @@ struct stat;
 struct rtcdate;
 
 // system calls
+int sigalarm(int,void (*handler)());//lab4-3
+int sigreturn(void);//lab4-3
 int fork(void);
 int exit(int) __attribute__((noreturn));
 int wait(int*);

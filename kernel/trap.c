@@ -66,7 +66,24 @@ usertrap(void)
 
     syscall();
   } else if((which_dev = devintr()) != 0){
-    // ok
+    //lab4-3
+    // 计时器中断，调用alarm相关函数
+    if(which_dev==2){
+      //判断是否禁用alarm
+      if(p->alarm_interval!=0){
+        //判断alarm间隔是否到期
+        if(--p->alarm_ticks==0){
+          //判断是否有处理程序正在运行，若有则内核不应再调用它
+          if(p->handler_is_return==0){
+            p->alarm_ticks=p->alarm_interval;
+            p->handler_is_return=1;
+            backupTrapframe(p->trapframe,p->alarm_trapframe);//备份
+            p->trapframe->epc=(uint64)(p->alarm_handerler);
+          }
+        }
+
+      }
+    }
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
@@ -216,5 +233,45 @@ devintr()
   } else {
     return 0;
   }
+}
+
+//lab4-3：备份trapframe
+void backupTrapframe(struct trapframe*now,struct trapframe*backup)
+{
+  backup->kernel_satp = now->kernel_satp;
+  backup->kernel_sp = now->kernel_sp;
+  backup->kernel_satp = now->kernel_satp;
+  backup->epc = now->epc;
+  backup->kernel_hartid = now->kernel_hartid;
+  backup->ra = now->ra;
+  backup->sp = now->sp;
+  backup->gp = now->gp;
+  backup->tp = now->tp;
+  backup->t0 = now->t0;
+  backup->t1 = now->t1;
+  backup->t2 = now->t2;
+  backup->s0 = now->s0;
+  backup->s1 = now->s1;
+  backup->a1 = now->a1;
+  backup->a2 = now->a2;
+  backup->a3 = now->a3;
+  backup->a4 = now->a4;
+  backup->a5 = now->a5;
+  backup->a6 = now->a6;
+  backup->a7 = now->a7;
+  backup->s2 = now->s2;
+  backup->s3 = now->s3;
+  backup->s4 = now->s4;
+  backup->s5 = now->s5;
+  backup->s6 = now->s6;
+  backup->s7 = now->s7;
+  backup->s8 = now->s8;
+  backup->s9 = now->s9;
+  backup->s10 = now->s10;
+  backup->s11 = now->s11;
+  backup->t3 = now->t3;
+  backup->t4 = now->t4;
+  backup->t5 = now->t5;
+  backup->t6 = now->t6;
 }
 
