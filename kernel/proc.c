@@ -134,7 +134,7 @@ found:
   if(pa == 0) //分配失败
       panic("kalloc");
   //计算当前进程的内核栈虚拟地址
-  uint64 va = KSTACK(0);//进程的内核栈虚拟地址从0开始
+  uint64 va = KSTACK((int) (p - proc));
   //进行物理地址和虚拟地址映射
   uvmmap(p->k_pagetable, va,(uint64)pa,PGSIZE,PTE_R | PTE_W);
   //将进程结构体的kstack为内核虚拟栈地址
@@ -158,15 +158,17 @@ freeproc(struct proc *p)
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
+
+      //清空内核栈
+  if(p->kstack) {
+    uint64 pa = kvmpa(p->k_pagetable,p->kstack);
+     // 通过kfree释放物理内存
+     kfree((void*) pa);
+  }
+  p->kstack = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
-
-    //清空内核栈
-  if(p->kstack) {
-    uvmunmap(p->k_pagetable, p->kstack, 1, 1);
-  }
-  p->kstack = 0;
     
     //解除映射
   if(p->k_pagetable)

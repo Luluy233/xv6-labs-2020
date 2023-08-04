@@ -129,13 +129,13 @@ kvmmap(uint64 va, uint64 pa, uint64 sz, int perm)
 // addresses on the stack.
 // assumes va is page aligned.
 uint64
-kvmpa(uint64 va)
+kvmpa(pagetable_t pagetable,uint64 va)
 {
   uint64 off = va % PGSIZE;
   pte_t *pte;
   uint64 pa;
   
-  pte = walk(myproc()->k_pagetable, va, 0);
+  pte = walk(pagetable, va, 0);
   if(pte == 0)
     panic("kvmpa");
   if((*pte & PTE_V) == 0)
@@ -503,7 +503,7 @@ proc_kpgtbl_init()
     //实现直接的虚拟地址到物理地址的映射
   uvmmap(kernelpt, UART0, UART0, PGSIZE, PTE_R | PTE_W);
   uvmmap(kernelpt, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
-  uvmmap(kernelpt, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+  // uvmmap(kernelpt, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
   uvmmap(kernelpt, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
   uvmmap(kernelpt, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
   uvmmap(kernelpt, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
@@ -513,15 +513,18 @@ proc_kpgtbl_init()
 
 //lab3-2
 void proc_freekpagetable(pagetable_t kpagetable) {
-    //解除映射
-    uvmunmap(kpagetable, UART0, 1, 0);
-    uvmunmap(kpagetable, VIRTIO0, 1, 0);
-    uvmunmap(kpagetable, CLINT, 0x10000 / PGSIZE, 0);
-    uvmunmap(kpagetable, PLIC, 0x400000 / PGSIZE, 0);
-    uvmunmap(kpagetable, KERNBASE, (PHYSTOP - KERNBASE) / PGSIZE, 0);
-    uvmunmap(kpagetable, TRAMPOLINE, 1, 0);
-    //释放物理内存大小
-    uvmfree(kpagetable, 0);
+  for (int i = 0; i < 512; ++i) {
+    pte_t pte = kpagetable[i];
+      if (pte & PTE_V) {
+        kpagetable[i] = 0;
+        // 若当前pte还指向下一级页表
+        if ((pte & (PTE_R | PTE_W | PTE_X)) == 0) {
+        uint64 child = PTE2PA(pte);
+        proc_freekpagetable((pagetable_t)child);
+        }
+      }
+  }
+    kfree((void*) kpagetable);
 }
 
 //lab3-3:添加复制函数
