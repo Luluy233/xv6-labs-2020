@@ -130,7 +130,7 @@ found:
   }
 
   //lab3-2内核栈分配
-    char *pa = kalloc();//分配1页物理内存给该进程
+  char *pa = kalloc();//分配1页物理内存给该进程
   if(pa == 0) //分配失败
       panic("kalloc");
   //计算当前进程的内核栈虚拟地址
@@ -159,7 +159,7 @@ freeproc(struct proc *p)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
 
-      //清空内核栈
+  //清空内核栈
   if(p->kstack) {
     uint64 pa = kvmpa(p->k_pagetable,p->kstack);
      // 通过kfree释放物理内存
