@@ -43,15 +43,16 @@ sys_sbrk(void)
 {
   int addr;
   int n;
-
-  if(argint(0, &n) < 0)
-    return -1;
+  
+  if (argint(0, &n) < 0)
+      return -1;
   addr = myproc()->sz;
-  //lab5-1
-  // if(growproc(n) < 0)
-  //   return -1;
-  myproc()->sz=myproc()->sz+n;
-
+  if (n < 0) {   // * 1:处理负的sbrk参数，此时立即释放空间
+      if (myproc()->sz + n < 0)   // * 2:缩小的空间不能大于当前的空间
+        return -1;
+      uvmdealloc(myproc()->pagetable, myproc()->sz, myproc()->sz + n);
+  }
+  myproc()->sz = myproc()->sz + n;   // * 懒分配，只增加进程大小
   return addr;
 }
 

@@ -70,23 +70,20 @@ usertrap(void)
   } 
   //lab5-2
   else if(r_scause()==13||r_scause()==15){
-    //发生页面错误
-    uint64 erraddr=PGROUNDDOWN(r_stval());//获取出错页面虚拟地址
-    //分配物理页面并映射
-    char* mem = kalloc();//分配物理地址
-    if(mem == 0){ //分配失败
-      printf("page fault: not enough memory");
+       // 处理页面错误
+    uint64 fault_va = r_stval();  // 产生页面错误的虚拟地址
+    char* pa;                     // 分配的物理地址
+    if(PGROUNDUP(p->trapframe->sp) - 1 < fault_va && fault_va < p->sz &&
+      (pa = kalloc()) != 0) {
+        memset(pa, 0, PGSIZE);
+        if(mappages(p->pagetable, PGROUNDDOWN(fault_va), PGSIZE, (uint64)pa, PTE_R | PTE_W | PTE_X | PTE_U) != 0) {
+          kfree(pa);
+          p->killed = 1;
+        }
+    } else {
+      // printf("usertrap(): out of memory!\n");
       p->killed = 1;
     }
-    else{
-      memset(mem, 0, PGSIZE);
-      if(mappages(p->pagetable, erraddr, PGSIZE, (uint64)mem, PTE_R|PTE_U|PTE_X|PTE_W) != 0){
-        kfree((void*)mem);
-        p->killed=1;
-      }
-    }
-    //返回用户空间
-    usertrapret();
   }
   else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);

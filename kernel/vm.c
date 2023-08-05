@@ -5,6 +5,9 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+//lab5-3
+#include "spinlock.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -96,15 +99,40 @@ walkaddr(pagetable_t pagetable, uint64 va)
 {
   pte_t *pte;
   uint64 pa;
+  struct proc* p=myproc();
+
 
   if(va >= MAXVA)
     return 0;
 
   pte = walk(pagetable, va, 0);
-  if(pte == 0)
-    return 0;
-  if((*pte & PTE_V) == 0)
-    return 0;
+  //lab5-3
+  // if(pte == 0)
+  //   return 0;
+  // if((*pte & PTE_V) == 0)
+  //   return 0;
+  //虚拟地址没有映射到物理地址
+  if(pte==0 || (*pte&PTE_V)==0){//惰性分配
+    if(va>=(p->sz))
+      return 0;//申请范围超过进程大小
+    else if(va<PGROUNDDOWN(p->trapframe->sp))
+      return 0;
+    else{
+      char *mem=kalloc();
+      if(mem==0)
+        return 0;
+      else{
+        memset(mem,0,PGSIZE);
+        va=PGROUNDDOWN(va);
+        if(mappages(p->pagetable,va,PGSIZE,(uint64)mem,PTE_W|PTE_X|PTE_R|PTE_U)!=0){
+          kfree((void *)mem);
+          return 0;
+        }
+        return (uint64)mem;//分配新页面，返回该新页面的物理地址
+      }
+    }
+  }
+
   if((*pte & PTE_U) == 0)
     return 0;
   pa = PTE2PA(*pte);
@@ -319,10 +347,13 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   char *mem;
 
   for(i = 0; i < sz; i += PGSIZE){
+    //lab5-3
     if((pte = walk(old, i, 0)) == 0)
-      panic("uvmcopy: pte should exist");
+      // panic("uvmcopy: pte should exist");
+      continue;
     if((*pte & PTE_V) == 0)
-      panic("uvmcopy: page not present");
+      // panic("uvmcopy: page not present");
+      continue;
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
     if((mem = kalloc()) == 0)
