@@ -67,7 +67,28 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  } 
+  //lab5-2
+  else if(r_scause()==13||r_scause()==15){
+    //发生页面错误
+    uint64 erraddr=PGROUNDDOWN(r_stval());//获取出错页面虚拟地址
+    //分配物理页面并映射
+    char* mem = kalloc();//分配物理地址
+    if(mem == 0){ //分配失败
+      printf("page fault: not enough memory");
+      p->killed = 1;
+    }
+    else{
+      memset(mem, 0, PGSIZE);
+      if(mappages(p->pagetable, erraddr, PGSIZE, (uint64)mem, PTE_R|PTE_U|PTE_X|PTE_W) != 0){
+        kfree((void*)mem);
+        p->killed=1;
+      }
+    }
+    //返回用户空间
+    usertrapret();
+  }
+  else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;
