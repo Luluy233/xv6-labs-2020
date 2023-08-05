@@ -99,19 +99,14 @@ walkaddr(pagetable_t pagetable, uint64 va)
 {
   pte_t *pte;
   uint64 pa;
-  struct proc* p=myproc();
 
 
   if(va >= MAXVA)
     return 0;
 
   pte = walk(pagetable, va, 0);
-  //lab5-3
-  // if(pte == 0)
-  //   return 0;
-  // if((*pte & PTE_V) == 0)
-  //   return 0;
   //虚拟地址没有映射到物理地址
+  struct proc* p=myproc();
   if(pte==0 || (*pte&PTE_V)==0){//惰性分配
     if(va>=(p->sz))
       return 0;//申请范围超过进程大小
