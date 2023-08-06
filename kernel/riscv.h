@@ -352,3 +352,6 @@ sfence_vma()
 
 typedef uint64 pte_t;
 typedef uint64 *pagetable_t; // 512 PTEs
+
+//lab6
+#define PTE_F (1L<<8) //记录应用量cow策略后的页面
