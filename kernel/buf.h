@@ -8,7 +8,5 @@ struct buf {
   struct buf *prev; // LRU cache list
   struct buf *next;
   uchar data[BSIZE];
-  
-  uint timestamp;//时间戳 lab8-2
 };
 
