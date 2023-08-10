@@ -322,6 +322,42 @@ sys_open(void)
     return -1;
   }
 
+   // 处理符号链接
+   if(ip->type == T_SYMLINK && !(omode & O_NOFOLLOW))
+  {
+    //这是个符号链接文件并且确定要follow
+    int depth=10;
+    char target[MAXPATH];
+    for(int i = 0; i < depth; i++)
+    {
+      //从符号链接文件的数据块中读取出路径target
+      if(readi(ip, 0, (uint64)target, 0, MAXPATH) != MAXPATH)
+      {
+        iunlockput(ip);
+        end_op();
+        return -1;
+      }
+      //原本的符号链接文件已经不需要了，释放它的锁
+      iunlockput(ip);
+      //得到了target，解析路径得到目标文件的inode
+      if((ip = namei(target)) == 0)
+      {
+        end_op();
+        return -1;
+      }
+      
+      ilock(ip);
+      if(ip->type!=T_SYMLINK)//得到的目标文件不再是符号链接，停止循环
+        break; 
+      if(i == depth - 1)
+      {//设置follow的最大深度
+        iunlockput(ip);
+        end_op();
+        return -1;    
+      }
+    }
+  }
+
   if((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0){
     if(f)
       fileclose(f);
@@ -482,5 +518,33 @@ sys_pipe(void)
     fileclose(wf);
     return -1;
   }
+  return 0;
+}
+
+uint64
+sys_symlink(void) {
+  char target[MAXPATH], path[MAXPATH];
+  struct inode* ip_path;
+
+  if(argstr(0, target, MAXPATH) < 0 || argstr(1, path, MAXPATH) < 0) {
+    return -1;
+  }
+
+  begin_op();
+  // 分配一个inode结点，create返回锁定的inode
+  ip_path = create(path, T_SYMLINK, 0, 0);
+  if(ip_path == 0) {
+    end_op();
+    return -1;
+  }
+  // 向inode数据块中写入target路径
+  if(writei(ip_path, 0, (uint64)target, 0, MAXPATH) < MAXPATH) {
+    iunlockput(ip_path);
+    end_op();
+    return -1;
+  }
+
+  iunlockput(ip_path);
+  end_op();
   return 0;
 }
