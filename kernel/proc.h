@@ -82,19 +82,19 @@ struct trapframe {
 
 enum procstate { UNUSED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
-#define NVMA 16
-#define NVMA 16
-// 虚拟内存区域结构体
-struct vm_area {
-  int used;           // 是否已被使用
-  uint64 addr;        // 起始地址
-  int len;            // 长度
-  int prot;           // 权限
-  int flags;          // 标志位
-  int vfd;            // 对应的文件描述符
-  struct file* vfile; // 对应文件
-  int offset;         // 文件偏移，本实验中一直为0
+
+struct vma {
+  int used;
+  uint64 addr;
+  int length;
+  int prot;
+  int flags;
+  int fd;
+  int offset;
+  struct file *file;
 };
+
+#define VMASIZE 16
 
 // Per-process state
 struct proc {
@@ -118,5 +118,5 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
-  struct vm_area vma[NVMA];    // 虚拟内存区域
+  struct vma vma[VMASIZE];     // vma of file system
 };
