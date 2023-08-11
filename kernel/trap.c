@@ -5,7 +5,11 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "sleeplock.h" //
+#include "fs.h" //
+#include "file.h"//
 #include "fcntl.h"
+
 
 struct spinlock tickslock;
 uint ticks;
